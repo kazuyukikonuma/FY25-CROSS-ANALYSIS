@@ -2,6 +2,9 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FY25 交叉分析</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -107,6 +110,25 @@ body.chat-open .hd{right:340px;transition:right .3s ease;}
 .chart-type-sw{display:flex;border:1.5px solid var(--bor);border-radius:8px;overflow:hidden;}
 .ctbtn{background:none;border:none;padding:6px 14px;font-size:.82rem;font-family:inherit;font-weight:600;cursor:pointer;color:var(--sub);}
 .ctbtn.on{background:var(--txt);color:#fff;}
+.comp-section{background:var(--sur);border:2px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;}
+.comp-title{font-size:.86rem;font-weight:700;color:var(--txt);margin-bottom:16px;}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.comp-card{background:var(--bg);border:1.5px solid var(--bor);border-radius:10px;padding:14px;}
+.comp-card-title{font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
+.comp-sel-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.comp-sel-btn{padding:5px 12px;border:1.5px solid var(--bor);border-radius:20px;font-size:.78rem;font-family:inherit;font-weight:600;cursor:pointer;background:var(--sur);color:var(--sub);transition:all .15s;}
+.comp-sel-btn.active{color:#fff;border-color:transparent;}
+.comp-donut-wrap{position:relative;height:200px;}
+.bar100-wrap{overflow-x:auto;}
+table.bar100{width:100%;border-collapse:collapse;}
+table.bar100 td{padding:5px 8px;vertical-align:middle;}
+table.bar100 .row-lbl{font-size:.8rem;font-weight:700;white-space:nowrap;width:80px;color:var(--txt);}
+table.bar100 .row-bar{width:100%;}
+table.bar100 .row-pct{font-size:.75rem;font-family:'DM Mono',monospace;font-weight:600;white-space:nowrap;width:50px;text-align:right;color:var(--sub);}
+.bar-track{height:28px;border-radius:4px;overflow:hidden;display:flex;background:var(--borl);}
+.bar-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;transition:width .4s ease;min-width:0;}
+.bar-seg:hover{opacity:.85;cursor:pointer;}
+@media(max-width:900px){.comp-grid{grid-template-columns:1fr;}}
 .loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--sub);gap:10px;}
 .spin{width:22px;height:22px;border:3px solid var(--bor);border-top-color:var(--at);border-radius:50%;animation:sp .7s linear infinite;}
 @keyframes sp{to{transform:rotate(360deg);}}
@@ -180,6 +202,7 @@ var I18N = {
     pY:'年度',pM:'月次',pQ:'季別',crossall:'全て',
     addBtn:'＋ 系列追加',clrBtn:'全消去',
     hint:'商品群と通路を選んで追加してください。複数の組み合わせを重ねて比較できます。',
+    compTitle:'構成比分析',compCat:'商品群別構成比',compCh:'通路別構成比',compSel:'クリックして選択',
     ctLine:'折れ線',ctBar:'積み上げ棒',
     emptyTxt:'系列を追加してグラフを表示',
     chartTitle:'絞り込み比較グラフ',
@@ -191,6 +214,7 @@ var I18N = {
     pY:'年度',pM:'月次',pQ:'季別',crossall:'全部',
     addBtn:'＋ 新增系列',clrBtn:'清除全部',
     hint:'選擇商品群和通路後新增，可重疊多組進行比較。',
+    compTitle:'構成比分析',compCat:'商品群構成比',compCh:'通路構成比',compSel:'點擊選擇',
     ctLine:'折線圖',ctBar:'堆疊長條',
     emptyTxt:'新增系列以顯示圖表',
     chartTitle:'篩選比較圖',
@@ -335,10 +359,28 @@ function renderMain(){
     +'</div>'
     +'</div>';
   html+='<div class="cross-table-card" id="cross-table-wrap"></div>';
+  html+='<div class="comp-section" id="comp-section">'
+    +'<div class="comp-title" id="comp-title-txt"></div>'
+    +'<div class="comp-grid">'
+    +'<div class="comp-card">'
+    +'<div class="comp-card-title"><span id="comp-cat-title"></span></div>'
+    +'<div class="comp-sel-row" id="comp-cat-sel"></div>'
+    +'<div class="comp-donut-wrap"><canvas id="donut-cat"></canvas></div>'
+    +'</div>'
+    +'<div class="comp-card">'
+    +'<div class="comp-card-title"><span id="comp-ch-title"></span></div>'
+    +'<div class="comp-sel-row" id="comp-ch-sel"></div>'
+    +'<div class="comp-donut-wrap"><canvas id="donut-ch"></canvas></div>'
+    +'</div>'
+    +'</div>'
+    +'<div class="comp-card-title" id="bar100-title" style="margin-bottom:10px;"></div>'
+    +'<div class="bar100-wrap" id="bar100-wrap"></div>'
+    +'</div>';
   document.getElementById('main').innerHTML=html;
   renderTags();
   renderChart();
   renderCrossTable();
+  renderComp();
 }
 
 // ===== Tags =====
@@ -432,6 +474,160 @@ function renderChart(){
 }
 
 // ===== Period / Lang =====
+var _selCat = '', _selCh = '';
+var _donutCatChart = null, _donutChChart = null;
+
+function renderComp(){
+  if(!globalRows) return;
+  var compTitleEl=document.getElementById('comp-title-txt');
+  var compCatTitleEl=document.getElementById('comp-cat-title');
+  var compChTitleEl=document.getElementById('comp-ch-title');
+  var bar100Title=document.getElementById('bar100-title');
+  if(compTitleEl) compTitleEl.textContent=t('compTitle');
+  if(compCatTitleEl) compCatTitleEl.textContent=t('compCat');
+  if(compChTitleEl) compChTitleEl.textContent=t('compCh');
+  if(bar100Title) bar100Title.textContent='100% '+t('compTitle');
+
+  // 商品群選択ボタン
+  var catSel=document.getElementById('comp-cat-sel');
+  if(catSel){
+    catSel.innerHTML='';
+    CATS.forEach(function(c){
+      var btn=document.createElement('button');
+      btn.className='comp-sel-btn'+(c===_selCat?' active':'');
+      btn.textContent=cn(c);
+      btn.style.borderColor=CCOLORS[c];
+      if(c===_selCat){ btn.style.background=CCOLORS[c]; }
+      btn.onclick=function(){ _selCat=(_selCat===c?'':c); renderComp(); };
+      catSel.appendChild(btn);
+    });
+  }
+
+  // 通路選択ボタン
+  var chSel=document.getElementById('comp-ch-sel');
+  if(chSel){
+    chSel.innerHTML='';
+    CH_GROUPS.forEach(function(g){
+      var btn=document.createElement('button');
+      btn.className='comp-sel-btn'+(g.key===_selCh?' active':'');
+      btn.textContent=cg(g.key);
+      btn.style.borderColor=g.color;
+      if(g.key===_selCh){ btn.style.background=g.color; }
+      btn.onclick=function(){ _selCh=(_selCh===g.key?'':g.key); renderComp(); };
+      chSel.appendChild(btn);
+    });
+  }
+
+  // 商品群選択→通路別ドーナツ
+  renderDonutCat();
+  // 通路選択→商品群別ドーナツ
+  renderDonutCh();
+  // 100%横棒
+  render100Bar();
+}
+
+function getMatData(){
+  var mat={};
+  CATS.forEach(function(c){ mat[c]={}; CH_GROUPS.forEach(function(g){ mat[c][g.key]=0; }); });
+  globalRows.forEach(function(row){
+    CH_GROUPS.forEach(function(g){
+      if(g.channels.indexOf(row.channel)>=0){
+        if(mat[row.category]) mat[row.category][g.key]+=MONTHS.reduce(function(s,m){return s+(row[m]||0);},0);
+      }
+    });
+  });
+  return mat;
+}
+
+function renderDonutCat(){
+  var canvas=document.getElementById('donut-cat'); if(!canvas) return;
+  var mat=getMatData();
+  var cat=_selCat||CATS[0];
+  var labels=CH_GROUPS.map(function(g){return cg(g.key);});
+  var data=CH_GROUPS.map(function(g){return mat[cat]?mat[cat][g.key]||0:0;});
+  var colors=CH_GROUPS.map(function(g){return g.color;});
+  var total=data.reduce(function(a,b){return a+b;},0);
+  if(_donutCatChart){ _donutCatChart.destroy(); _donutCatChart=null; }
+  _donutCatChart=new Chart(canvas,{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:data.map(function(v){return parseFloat((v/10000).toFixed(1));}),backgroundColor:colors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+      plugins:{
+        title:{display:true,text:cn(cat),color:CCOLORS[cat]||'#0f172a',font:{size:13,weight:'700'}},
+        legend:{position:'bottom',labels:{color:'#0f172a',font:{size:11,weight:'600'},padding:8}},
+        tooltip:{callbacks:{label:function(ctx){
+          var pct=(ctx.parsed/total*10000*100).toFixed(1);
+          return ' '+ctx.label+': '+ctx.parsed+'萬 ('+pct+'%)';
+        }}}
+      }
+    }
+  });
+}
+
+function renderDonutCh(){
+  var canvas=document.getElementById('donut-ch'); if(!canvas) return;
+  var mat=getMatData();
+  var grpKey=_selCh||CH_GROUPS[0].key;
+  var labels=CATS.map(cn);
+  var data=CATS.map(function(c){return mat[c]?mat[c][grpKey]||0:0;});
+  var colors=CATS.map(function(c){return CCOLORS[c];});
+  var total=data.reduce(function(a,b){return a+b;},0);
+  var grpColor=(CH_GROUPS.filter(function(g){return g.key===grpKey;})[0]||{}).color||'#7b9cc4';
+  if(_donutChChart){ _donutChChart.destroy(); _donutChChart=null; }
+  _donutChChart=new Chart(canvas,{
+    type:'doughnut',
+    data:{labels:labels,datasets:[{data:data.map(function(v){return parseFloat((v/10000).toFixed(1));}),backgroundColor:colors,borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+      plugins:{
+        title:{display:true,text:cg(grpKey),color:grpColor,font:{size:13,weight:'700'}},
+        legend:{position:'bottom',labels:{color:'#0f172a',font:{size:11,weight:'600'},padding:8}},
+        tooltip:{callbacks:{label:function(ctx){
+          var pct=(ctx.parsed/total*10000*100).toFixed(1);
+          return ' '+ctx.label+': '+ctx.parsed+'萬 ('+pct+'%)';
+        }}}
+      }
+    }
+  });
+}
+
+function render100Bar(){
+  var wrap=document.getElementById('bar100-wrap'); if(!wrap) return;
+  var mat=getMatData();
+  var grand=getGrand();
+  var html='<table class="bar100">';
+  // 商品群行（通路別構成）
+  CATS.forEach(function(c){
+    var rowTotal=CH_GROUPS.reduce(function(s,g){return s+(mat[c][g.key]||0);},0);
+    html+='<tr><td class="row-lbl" style="color:'+CCOLORS[c]+'">'+cn(c)+'</td><td class="row-bar"><div class="bar-track">';
+    CH_GROUPS.forEach(function(g){
+      var v=mat[c][g.key]||0;
+      var pct=rowTotal?v/rowTotal*100:0;
+      if(pct<1) return;
+      html+='<div class="bar-seg" style="width:'+pct.toFixed(1)+'%;background:'+g.color+'" title="'+cg(g.key)+' '+pct.toFixed(1)+'%">'
+        +(pct>8?pct.toFixed(0)+'%':'')+'</div>';
+    });
+    html+='</div></td><td class="row-pct">'+((rowTotal/grand)*100).toFixed(1)+'%</td></tr>';
+  });
+  // 区切り
+  html+='<tr><td colspan="3" style="height:8px;"></td></tr>';
+  // 通路行（商品群別構成）
+  CH_GROUPS.forEach(function(g){
+    var rowTotal=CATS.reduce(function(s,c){return s+(mat[c][g.key]||0);},0);
+    if(!rowTotal) return;
+    html+='<tr><td class="row-lbl" style="color:'+g.color+'">'+cg(g.key)+'</td><td class="row-bar"><div class="bar-track">';
+    CATS.forEach(function(c){
+      var v=mat[c][g.key]||0;
+      var pct=rowTotal?v/rowTotal*100:0;
+      if(pct<1) return;
+      html+='<div class="bar-seg" style="width:'+pct.toFixed(1)+'%;background:'+CCOLORS[c]+'" title="'+cn(c)+' '+pct.toFixed(1)+'%">'
+        +(pct>8?pct.toFixed(0)+'%':'')+'</div>';
+    });
+    html+='</div></td><td class="row-pct">'+((rowTotal/grand)*100).toFixed(1)+'%</td></tr>';
+  });
+  html+='</table>';
+  wrap.innerHTML=html;
+}
+
 function renderCrossTable(){
   var wrap=document.getElementById('cross-table-wrap'); if(!wrap||!globalRows) return;
   // 商品群×通路グループのクロス集計
@@ -512,7 +708,7 @@ function setLang(l){
   if(clearBtn) clearBtn.textContent=t('clear');
   var initMsg=document.getElementById('chat-init-msg');
   if(initMsg) initMsg.textContent=t('chatInit');
-  if(globalRows){ renderKPI(); renderMain(); renderCrossTable(); }
+  if(globalRows){ renderKPI(); renderMain(); }
 }
 
 // ===== Grand total =====
