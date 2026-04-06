@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FY25 交叉分析</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
+:root{
+  --bg:#fdf8f4;--sur:#fffef9;--bor:#e8ddd4;--borl:#f5ede6;
+  --txt:#0f172a;--sub:#475569;--dim:#94a3b8;
+  --al:#7b9cc4;--ap:#c4a882;--am:#93d9f0;
+  --alb:#edf3fb;--apb:#f7f0e6;--amb:#e4f6fd;
+  --web:#f4a5a5;--tel:#f5e19a;--kol:#f5afd4;--ec:#c4b0f0;--oth:#c8cdd6;
+  --at:#e07b6a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;}
+
+/* ===== Sticky Header ===== */
+.hd{position:sticky;top:0;z-index:100;background:var(--sur);border-bottom:2px solid var(--bor);padding:10px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);flex-wrap:wrap;}
+.hd-title{font-size:1.1rem;font-weight:700;white-space:nowrap;}
+.hd-total{font-size:1.4rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--at);letter-spacing:-.03em;}
+.hd-unit{font-size:.82rem;color:var(--sub);margin-left:2px;}
+.hd-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.psw{display:flex;border:2px solid var(--bor);border-radius:8px;overflow:hidden;}
+.pbtn{background:none;border:none;padding:6px 16px;font-size:.83rem;font-family:inherit;font-weight:600;cursor:pointer;color:var(--sub);}
+.pbtn.on{background:var(--txt);color:#fff;}
+.ltog{display:flex;border:2px solid var(--bor);border-radius:8px;overflow:hidden;}
+.lbtn{background:none;border:none;padding:6px 13px;font-size:.8rem;font-family:inherit;font-weight:500;cursor:pointer;color:var(--sub);}
+.lbtn.on{background:var(--txt);color:#fff;}
+
+/* ===== KPI strip ===== */
+.kstrip{display:flex;gap:8px;padding:14px 24px;overflow-x:auto;background:var(--sur);border-bottom:1px solid var(--borl);}
+.kcard{background:var(--bg);border:1.5px solid var(--bor);border-radius:10px;padding:10px 14px;min-width:110px;flex-shrink:0;cursor:pointer;transition:all .15s;user-select:none;}
+.kcard:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08);}
+.kcard.selected{border-width:2.5px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.kcard.sep{width:1px;min-width:1px;background:var(--bor);padding:0;border:none;border-radius:0;}
+.klbl{font-size:.72rem;font-weight:600;color:var(--sub);margin-bottom:4px;white-space:nowrap;}
+.kval{font-size:1.1rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.02em;}
+.kpct{font-size:.72rem;color:var(--sub);margin-top:2px;}
+
+/* ===== Main area ===== */
+.main{padding:20px 24px;max-width:1400px;margin:0 auto;}
+body.chat-open .main{padding-right:20px;}
+
+/* ===== Filter panel ===== */
+.filter-card{background:var(--sur);border:2px solid var(--bor);border-radius:14px;padding:18px 22px;margin-bottom:16px;}
+.filter-title{font-size:.82rem;font-weight:700;color:var(--sub);letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px;}
+.filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
+.fsel{padding:8px 14px;border:1.5px solid var(--bor);border-radius:8px;font-family:inherit;font-size:.88rem;color:var(--txt);background:var(--sur);cursor:pointer;min-width:140px;}
+.fsel:focus{outline:none;border-color:var(--al);}
+.fadd{padding:8px 18px;background:var(--txt);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:.88rem;font-weight:700;cursor:pointer;}
+.fadd:hover{opacity:.88;}
+.fclr{padding:8px 14px;background:none;color:var(--sub);border:1.5px solid var(--bor);border-radius:8px;font-family:inherit;font-size:.88rem;cursor:pointer;}
+.ftags{display:flex;flex-wrap:wrap;gap:7px;min-height:22px;}
+.ftag{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:.82rem;font-weight:600;}
+.ftag button{background:none;border:none;cursor:pointer;font-size:.95rem;line-height:1;opacity:.65;}
+.ftag button:hover{opacity:1;}
+.hint{font-size:.78rem;color:var(--dim);margin-top:6px;}
+
+/* ===== Chart card ===== */
+.chart-card{background:var(--sur);border:2px solid var(--bor);border-radius:14px;padding:20px 22px;}
+.chart-title{font-size:.86rem;font-weight:700;color:var(--txt);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.chart-badge{font-size:.7rem;background:var(--alb);color:var(--al);padding:2px 8px;border-radius:12px;font-weight:600;}
+.cw{position:relative;height:420px;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:420px;color:var(--dim);gap:12px;}
+.empty-icon{font-size:3rem;opacity:.4;}
+.empty-txt{font-size:.92rem;}
+
+/* ===== Chat Panel ===== */
+.chat-toggle{position:fixed;right:16px;bottom:20px;z-index:200;width:68px;height:68px;border-radius:50%;background:transparent;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.15);padding:0;overflow:hidden;transition:transform .2s;}
+.chat-toggle:hover{transform:scale(1.08);}
+.chat-toggle img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.chat-panel{position:fixed;right:0;top:0;bottom:0;width:340px;background:#e8f4fd;border-left:2px solid #b8d4ed;z-index:150;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;box-shadow:-4px 0 20px rgba(0,0,0,.08);}
+.chat-panel.open{transform:translateX(0);}
+body.chat-open{padding-right:340px;transition:padding-right .3s ease;}
+body.chat-open .hd{right:340px;transition:right .3s ease;}
+.chat-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #b8d4ed;background:#c8e3f5;}
+.chat-hd-title{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px;color:#1e3a5f;}
+.chat-hd-badge{font-size:.65rem;background:#f5afd4;color:#1a202c;padding:2px 8px;border-radius:20px;font-weight:700;}
+.chat-ctx{font-size:.72rem;color:#4a7090;padding:8px 14px;background:#d4eaf7;border-bottom:1px solid #b8d4ed;line-height:1.5;}
+.chat-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#eef6fc;}
+.chat-msg{max-width:88%;padding:10px 13px;border-radius:12px;font-size:.83rem;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.chat-msg.user{background:#7b9cc4;color:#fff;align-self:flex-end;}
+.chat-msg.ai{background:#fff;color:#1e3a5f;border:1px solid #b8d4ed;align-self:flex-start;}
+.chat-msg.thinking{color:#7ba8c4;font-style:italic;align-self:flex-start;}
+.chat-input-area{padding:14px;border-top:1px solid #b8d4ed;background:#c8e3f5;display:flex;gap:8px;align-items:flex-end;}
+.chat-input{flex:1;padding:9px 12px;border:1.5px solid #b8d4ed;border-radius:8px;font-family:inherit;font-size:.83rem;resize:none;min-height:80px;max-height:160px;outline:none;background:#fff;color:#1e3a5f;}
+.chat-input:focus{border-color:#7b9cc4;}
+.chat-input::placeholder{color:#99bbcc;}
+.chat-send{padding:9px 14px;background:#7b9cc4;color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:.83rem;font-weight:700;cursor:pointer;}
+.chat-send:hover{background:#6b8cb4;}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;}
+.chat-close{background:none;border:none;font-size:1.1rem;cursor:pointer;color:#4a7090;padding:2px 6px;}
+.chat-clear{background:none;border:1px solid #b8d4ed;border-radius:6px;font-size:.72rem;color:#4a7090;padding:3px 8px;cursor:pointer;}
+
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--sub);gap:10px;}
+.spin{width:22px;height:22px;border:3px solid var(--bor);border-top-color:var(--at);border-radius:50%;animation:sp .7s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+.err{color:var(--at);text-align:center;padding:40px;}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hd">
+  <div class="hd-title" id="h-title">FY25 交叉分析</div>
+  <div><span class="hd-total" id="h-total">—</span><span class="hd-unit" id="h-unit">萬元</span></div>
+  <div class="hd-right">
+    <div class="psw">
+      <button class="pbtn on" id="pb-y" onclick="setPeriod('y')">年度</button>
+      <button class="pbtn" id="pb-m" onclick="setPeriod('m')">月次</button>
+      <button class="pbtn" id="pb-q" onclick="setPeriod('q')">季別</button>
+    </div>
+    <div class="ltog">
+      <button class="lbtn" onclick="setLang('ja')">日本語</button>
+      <button class="lbtn on" onclick="setLang('zh')">繁中</button>
+    </div>
+  </div>
+</div>
+
+<!-- KPI Strip -->
+<div class="kstrip" id="kstrip"></div>
+
+<!-- Main -->
+<div class="main" id="main">
+  <div class="loading"><div class="spin"></div><span>載入資料中…</span></div>
+</div>
+
+<!-- Chat -->
+<button class="chat-toggle" id="chat-btn" title="AI分析助理"><img src="AIC.jpg" alt="AI"></button>
+<div class="chat-panel" id="chat-panel">
+  <div class="chat-hd">
+    <div class="chat-hd-title"><span id="chat-hd-txt">AI 分析助理</span><span class="chat-hd-badge">Claude</span></div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <button class="chat-clear" id="chat-clear-btn">清除</button>
+      <button class="chat-close" id="chat-close-btn">✕</button>
+    </div>
+  </div>
+  <div class="chat-ctx" id="chat-ctx">資料讀取中…</div>
+  <div class="chat-msgs" id="chat-msgs">
+    <div class="chat-msg ai" id="chat-init-msg">您好！請隨時詢問FY25銷售數據相關問題。</div>
+  </div>
+  <div class="chat-input-area">
+    <textarea class="chat-input" id="chat-input" placeholder="例：TEL在8月為何急增？" rows="3"></textarea>
+    <button class="chat-send" id="chat-send-btn">傳送</button>
+  </div>
+</div>
+
+<script>
+// ===== 定数 =====
+var MONTHS = ['4月','5月','6月','7月','8月','9月','10月','11月','12月','1月','2月','3月'];
+var QUARTERS = [
+  {key:'Q1',months:['4月','5月','6月']},
+  {key:'Q2',months:['7月','8月','9月']},
+  {key:'Q3',months:['10月','11月','12月']},
+  {key:'Q4',months:['1月','2月','3月']}
+];
+var CATS = ['學習','周邊','Mirafeel'];
+var CCOLORS = {'學習':'#7b9cc4','周邊':'#c4a882','Mirafeel':'#93d9f0'};
+var CH_GROUPS = [
+  {key:'WEB',channels:['官網'],color:'#f4a5a5'},
+  {key:'TEL',channels:['電銷'],color:'#e8c840'},
+  {key:'KOL',channels:['團購'],color:'#f5afd4'},
+  {key:'EC', channels:['蝦皮'],color:'#c4b0f0'},
+  {key:'その他',channels:['經代銷','其他'],color:'#c8cdd6'}
+];
+var SERIES_COLORS = ['#7b9cc4','#c4a882','#93d9f0','#f4a5a5','#e8c840','#f5afd4','#c4b0f0','#e07b6a','#6b9e6b','#c8cdd6'];
+
+var I18N = {
+  ja:{title:'FY25 クロス分析',unit:'万元',total:'合計',cat:'商品群',ch:'通路',
+    pY:'年度',pM:'月次',pQ:'季別',crossall:'全て',
+    addBtn:'＋ 系列追加',clrBtn:'全消去',
+    hint:'商品群と通路を選んで追加してください。複数の組み合わせを重ねて比較できます。',
+    emptyTxt:'系列を追加してグラフを表示',
+    chartTitle:'絞り込み比較グラフ',
+    chatHd:'AI 分析アシスタント',chatCtx:'表示中：',chatInit:'こんにちは！FY25の売上データについて何でも聞いてください。',
+    send:'送信',clear:'クリア',
+    names:{'學習':'学習','周邊':'周邊','Mirafeel':'Mirafeel'},
+    chnames:{'WEB':'WEB','TEL':'TEL','KOL':'KOL','EC':'EC','その他':'その他'}},
+  zh:{title:'FY25 交叉分析',unit:'萬元',total:'合計',cat:'商品群',ch:'通路',
+    pY:'年度',pM:'月次',pQ:'季別',crossall:'全部',
+    addBtn:'＋ 新增系列',clrBtn:'清除全部',
+    hint:'選擇商品群和通路後新增，可重疊多組進行比較。',
+    emptyTxt:'新增系列以顯示圖表',
+    chartTitle:'篩選比較圖',
+    chatHd:'AI 分析助理',chatCtx:'顯示中：',chatInit:'您好！請隨時詢問FY25銷售數據相關問題。',
+    send:'傳送',clear:'清除',
+    names:{'學習':'學習','周邊':'周邊','Mirafeel':'Mirafeel'},
+    chnames:{'WEB':'WEB','TEL':'TEL','KOL':'KOL','EC':'EC','その他':'其他'}}
+};
+
+var lang='zh', period='y';
+var globalRows=null, byCat={}, byGrp={};
+var seriesList=[];
+var chartInst=null;
+var chatOpen=false, chatHistory=[];
+
+function t(k){ return I18N[lang][k]; }
+function cn(c){ return I18N[lang].names[c]||c; }
+function cg(g){ return I18N[lang].chnames[g]||g; }
+function fw(n){ return (n/10000).toFixed(1); }
+
+// ===== CSV parse =====
+function parseCSV(text){
+  var lines=text.trim().split('\n'), hdr=lines[0].split(',');
+  return lines.slice(1).map(function(line){
+    var v=line.split(','), o={};
+    hdr.forEach(function(h,i){ var s=(v[i]||'').trim(); o[h.trim()]=(s!==''&&!isNaN(s))?Number(s):s; });
+    return o;
+  });
+}
+
+// ===== Aggregate =====
+function buildAgg(){
+  byCat={};
+  CATS.forEach(function(c){ byCat[c]={}; MONTHS.forEach(function(m){ byCat[c][m]=0; }); });
+  byGrp={};
+  CH_GROUPS.forEach(function(g){ byGrp[g.key]={}; MONTHS.forEach(function(m){ byGrp[g.key][m]=0; }); });
+  globalRows.forEach(function(row){
+    if(byCat[row.category]) MONTHS.forEach(function(m){ byCat[row.category][m]+=(row[m]||0); });
+    CH_GROUPS.forEach(function(g){
+      if(g.channels.indexOf(row.channel)>=0) MONTHS.forEach(function(m){ byGrp[g.key][m]+=(row[m]||0); });
+    });
+  });
+}
+
+// ===== Period helpers =====
+function getPList(){ return period==='q'?QUARTERS.map(function(q){return q.key;}):MONTHS; }
+function getPLabel(){ return t(period==='y'?'pY':period==='m'?'pM':'pQ'); }
+function sumForPeriod(monthMap, pkey){
+  if(period==='q'){
+    var q=QUARTERS.filter(function(qq){return qq.key===pkey;})[0];
+    return q?q.months.reduce(function(s,m){return s+(monthMap[m]||0);},0):0;
+  }
+  return monthMap[pkey]||0;
+}
+
+// ===== Series data =====
+function getSeriesData(cat, grp){
+  if(!globalRows) return getPList().map(function(){return 0;});
+  var rows=globalRows.filter(function(r){
+    var catOk=!cat||r.category===cat;
+    var grpOk=!grp;
+    if(grp){ var g=CH_GROUPS.filter(function(gg){return gg.key===grp;})[0]; grpOk=g&&g.channels.indexOf(r.channel)>=0; }
+    return catOk&&grpOk;
+  });
+  return getPList().map(function(pkey){
+    if(period==='q'){
+      var q=QUARTERS.filter(function(qq){return qq.key===pkey;})[0];
+      return q?parseFloat((rows.reduce(function(s,r){return s+q.months.reduce(function(ss,m){return ss+(r[m]||0);},0);},0)/10000).toFixed(1)):0;
+    }
+    return parseFloat((rows.reduce(function(s,r){return s+(r[pkey]||0);},0)/10000).toFixed(1));
+  });
+}
+
+// ===== Grand total =====
+function getGrand(){
+  return CATS.reduce(function(s,c){ return s+MONTHS.reduce(function(ss,m){return ss+(byCat[c]?byCat[c][m]||0:0);},0); },0);
+}
+
+// ===== KPI strip =====
+function renderKPI(){
+  var grand=getGrand();
+  var html='';
+  // 合計
+  html+='<div class="kcard" style="border-color:var(--at);" onclick="addPreset(\'\',\'\')">'
+    +'<div class="klbl">'+t('total')+'</div>'
+    +'<div class="kval" style="color:var(--at)">'+fw(grand)+'</div>'
+    +'<div class="kpct">100%</div></div>';
+  html+='<div class="kcard sep"></div>';
+  // 商品群
+  CATS.forEach(function(c){
+    var v=MONTHS.reduce(function(s,m){return s+(byCat[c]?byCat[c][m]||0:0);},0);
+    html+='<div class="kcard" style="border-color:'+CCOLORS[c]+';" onclick="addPreset(\''+c+'\',\'\')">'
+      +'<div class="klbl">'+cn(c)+'</div>'
+      +'<div class="kval" style="color:'+CCOLORS[c]+'">'+fw(v)+'</div>'
+      +'<div class="kpct">'+((v/grand)*100).toFixed(1)+'%</div></div>';
+  });
+  html+='<div class="kcard sep"></div>';
+  // 通路グループ
+  CH_GROUPS.forEach(function(g){
+    var v=MONTHS.reduce(function(s,m){return s+(byGrp[g.key]?byGrp[g.key][m]||0:0);},0);
+    html+='<div class="kcard" style="border-color:'+g.color+';" onclick="addPreset(\'\',\''+g.key+'\')">'
+      +'<div class="klbl">'+cg(g.key)+'</div>'
+      +'<div class="kval" style="color:'+g.color+'">'+fw(v)+'</div>'
+      +'<div class="kpct">'+((v/grand)*100).toFixed(1)+'%</div></div>';
+  });
+  document.getElementById('kstrip').innerHTML=html;
+}
+
+// ===== Main panel =====
+function renderMain(){
+  var catOpts='<option value="">— '+t('crossall')+' —</option>'
+    +CATS.map(function(c){return '<option value="'+c+'">'+cn(c)+'</option>';}).join('');
+  var grpOpts='<option value="">— '+t('crossall')+' —</option>'
+    +CH_GROUPS.map(function(g){return '<option value="'+g.key+'">'+cg(g.key)+'</option>';}).join('');
+
+  var html='<div class="filter-card">'
+    +'<div class="filter-title" id="filter-title">'+t('cat')+' × '+t('ch')+'</div>'
+    +'<div class="filter-row">'
+    +'<select class="fsel" id="sel-cat">'+catOpts+'</select>'
+    +'<select class="fsel" id="sel-grp">'+grpOpts+'</select>'
+    +'<button class="fadd" onclick="addSeries()" id="add-btn">'+t('addBtn')+'</button>'
+    +'<button class="fclr" onclick="clrSeries()" id="clr-btn">'+t('clrBtn')+'</button>'
+    +'</div>'
+    +'<div class="ftags" id="ftags"></div>'
+    +'<div class="hint" id="hint-txt">'+t('hint')+'</div>'
+    +'</div>'
+    +'<div class="chart-card">'
+    +'<div class="chart-title"><span id="chart-title-txt">'+t('chartTitle')+'</span>'
+    +'<span class="chart-badge" id="chart-badge">'+getPLabel()+'</span></div>'
+    +'<div class="cw" id="chart-wrap">'
+    +'<div class="empty-state" id="empty-state">'
+    +'<div class="empty-icon">📊</div>'
+    +'<div class="empty-txt" id="empty-txt">'+t('emptyTxt')+'</div>'
+    +'</div>'
+    +'<canvas id="main-chart" style="display:none"></canvas>'
+    +'</div>'
+    +'</div>';
+  document.getElementById('main').innerHTML=html;
+  renderTags();
+  renderChart();
+}
+
+// ===== Tags =====
+function renderTags(){
+  var box=document.getElementById('ftags'); if(!box) return;
+  box.innerHTML='';
+  seriesList.forEach(function(s,i){
+    var tag=document.createElement('span');
+    tag.className='ftag';
+    tag.style.background=s.color+'22'; tag.style.color=s.color; tag.style.border='1.5px solid '+s.color;
+    tag.innerHTML=s.label+' <button onclick="rmSeries('+i+')">✕</button>';
+    box.appendChild(tag);
+  });
+}
+
+// ===== Add/Remove series =====
+function addSeries(){
+  var cat=document.getElementById('sel-cat').value;
+  var grp=document.getElementById('sel-grp').value;
+  _addSeries(cat, grp);
+}
+
+function addPreset(cat, grp){
+  _addSeries(cat, grp);
+}
+
+function _addSeries(cat, grp){
+  var catLabel=cat?cn(cat):t('crossall');
+  var grpLabel=grp?cg(grp):t('crossall');
+  var label=catLabel+' × '+grpLabel;
+  if(seriesList.filter(function(s){return s.cat===cat&&s.grp===grp;}).length) return;
+  var color=SERIES_COLORS[seriesList.length%SERIES_COLORS.length];
+  seriesList.push({cat:cat,grp:grp,label:label,color:color});
+  renderTags();
+  renderChart();
+}
+
+function rmSeries(idx){
+  seriesList.splice(idx,1);
+  renderTags();
+  renderChart();
+}
+
+function clrSeries(){
+  seriesList=[];
+  renderTags();
+  renderChart();
+}
+
+// ===== Chart =====
+function renderChart(){
+  var canvas=document.getElementById('main-chart');
+  var empty=document.getElementById('empty-state');
+  if(!canvas||!empty) return;
+  if(!seriesList.length){
+    canvas.style.display='none'; empty.style.display='flex'; return;
+  }
+  canvas.style.display='block'; empty.style.display='none';
+  if(chartInst){ chartInst.destroy(); chartInst=null; }
+  var unit=lang==='zh'?' 萬':' 万';
+  var pList=getPList();
+  chartInst=new Chart(canvas,{
+    type:'line',
+    data:{
+      labels:pList,
+      datasets:seriesList.map(function(s){
+        return {
+          label:s.label,
+          data:getSeriesData(s.cat,s.grp),
+          borderColor:s.color,
+          backgroundColor:s.color+'18',
+          borderWidth:2.5,
+          pointRadius:5,
+          pointHoverRadius:8,
+          pointBackgroundColor:s.color,
+          tension:0.3,
+          fill:false
+        };
+      })
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{position:'top',labels:{color:'#0f172a',font:{size:13,weight:'600'},padding:16,usePointStyle:true}},
+        tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleColor:'#f8fafc',bodyColor:'#e2e8f0',padding:12,callbacks:{
+          label:function(ctx){ return ' '+ctx.dataset.label+': '+ctx.parsed.y+unit; }
+        }}
+      },
+      scales:{
+        x:{ticks:{color:'#0f172a',font:{size:12,weight:'600'}},grid:{color:'#f0ece8'}},
+        y:{ticks:{color:'#0f172a',font:{size:12,weight:'600'},callback:function(v){return v+unit;}},grid:{color:'#f0ece8'}}
+      }
+    }
+  });
+  // badge更新
+  var badge=document.getElementById('chart-badge');
+  if(badge) badge.textContent=getPLabel();
+}
+
+// ===== Period / Lang =====
+function setPeriod(p){
+  period=p;
+  ['y','m','q'].forEach(function(k){ document.getElementById('pb-'+k).classList.toggle('on',k===p); });
+  renderChart();
+  var badge=document.getElementById('chart-badge');
+  if(badge) badge.textContent=getPLabel();
+  updateChatCtx();
+}
+
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lbtn').forEach(function(b){ b.classList.toggle('on',b.textContent.includes(l==='ja'?'日本語':'繁中')); });
+  document.getElementById('h-title').textContent=t('title');
+  document.getElementById('h-unit').textContent=t('unit');
+  document.getElementById('pb-y').textContent=t('pY');
+  document.getElementById('pb-m').textContent=t('pM');
+  document.getElementById('pb-q').textContent=t('pQ');
+  // chat UI
+  var hdTxt=document.getElementById('chat-hd-txt');
+  if(hdTxt) hdTxt.textContent=t('chatHd');
+  var inp=document.getElementById('chat-input');
+  if(inp) inp.placeholder=l==='ja'?'例：TELが8月に急増した理由は？':'例：TEL在8月為何急增？';
+  var sendBtn=document.getElementById('chat-send-btn');
+  if(sendBtn) sendBtn.textContent=t('send');
+  var clearBtn=document.getElementById('chat-clear-btn');
+  if(clearBtn) clearBtn.textContent=t('clear');
+  var initMsg=document.getElementById('chat-init-msg');
+  if(initMsg) initMsg.textContent=t('chatInit');
+  if(globalRows){ renderKPI(); renderMain(); }
+}
+
+// ===== Grand total =====
+function updateHeader(){
+  var grand=getGrand();
+  document.getElementById('h-total').textContent=fw(grand);
+}
+
+// ===== Chat =====
+function updateChatCtx(){
+  var el=document.getElementById('chat-ctx'); if(!el||!globalRows) return;
+  var pl=getPLabel();
+  el.textContent=t('chatCtx')+pl+' | FY25（4月〜3月）';
+}
+
+function _toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chat-panel').classList.toggle('open',chatOpen);
+  document.body.classList.toggle('chat-open',chatOpen);
+  var btn=document.getElementById('chat-btn');
+  if(btn) btn.style.display=chatOpen?'none':'block';
+  if(chatOpen) updateChatCtx();
+}
+
+function _buildPrompt(){
+  if(!globalRows) return 'FY25台湾売上データのアナリストです。';
+  var pl=getPLabel();
+  var grand=getGrand();
+  var parts=['あなたはベネッセ台湾支社FY25売上アナリストです。日本語で簡潔に答えてください。マークダウン記号は使わずプレーンテキストで回答してください。'];
+  parts.push('粒度:'+pl);
+  parts.push('年間合計:'+(grand/10000).toFixed(1)+'万元');
+  CATS.forEach(function(c){ var v=MONTHS.reduce(function(s,m){return s+(byCat[c]?byCat[c][m]||0:0);},0); parts.push(cn(c)+':'+(v/10000).toFixed(1)+'万元('+(v/grand*100).toFixed(1)+'%)'); });
+  CH_GROUPS.forEach(function(g){ var v=MONTHS.reduce(function(s,m){return s+(byGrp[g.key]?byGrp[g.key][m]||0:0);},0); parts.push(g.key+':'+(v/10000).toFixed(1)+'万元('+(v/grand*100).toFixed(1)+'%)'); });
+  if(period!=='q'){
+    MONTHS.forEach(function(m){ var v=CATS.reduce(function(s,c){return s+(byCat[c]?byCat[c][m]||0:0);},0); parts.push(m+(v/10000).toFixed(1)); });
+  } else {
+    QUARTERS.forEach(function(q){ var v=CATS.reduce(function(s,c){return s+(byCat[c]?q.months.reduce(function(ss,mm){return ss+(byCat[c][mm]||0);},0):0);},0); parts.push(q.key+(v/10000).toFixed(1)+'万元'); });
+  }
+  if(seriesList.length){
+    parts.push('現在表示中の系列:');
+    seriesList.forEach(function(s){ parts.push(s.label); });
+  }
+  return parts.join(' | ');
+}
+
+function _addMsg(role,text,cls){
+  var box=document.getElementById('chat-msgs');
+  var el=document.createElement('div');
+  el.className='chat-msg '+role+(cls?' '+cls:'');
+  el.textContent=text;
+  box.appendChild(el);
+  box.scrollTop=box.scrollHeight;
+  return el;
+}
+
+async function _sendChat(){
+  var inp=document.getElementById('chat-input');
+  var msg=inp.value.trim(); if(!msg) return;
+  _addMsg('user',msg);
+  inp.value=''; inp.style.height='auto';
+  var sendBtn=document.getElementById('chat-send-btn');
+  sendBtn.disabled=true;
+  var thinking=_addMsg('ai','考え中…','thinking');
+  chatHistory.push({role:'user',content:msg});
+  try{
+    var res=await fetch('/.netlify/functions/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatHistory,systemPrompt:_buildPrompt()})});
+    var data=await res.json();
+    thinking.remove();
+    if(data.error){ _addMsg('ai','エラー: '+data.error); }
+    else{ _addMsg('ai',data.content); chatHistory.push({role:'assistant',content:data.content}); if(chatHistory.length>20) chatHistory=chatHistory.slice(-20); }
+  }catch(e){ thinking.remove(); _addMsg('ai','通信エラー: '+e.message); }
+  sendBtn.disabled=false;
+}
+
+function _clearChat(){ chatHistory=[]; document.getElementById('chat-msgs').innerHTML='<div class="chat-msg ai" id="chat-init-msg">'+t('chatInit')+'</div>'; }
+
+// ===== Boot =====
+window.addEventListener('load',function(){
+  var btn=document.getElementById('chat-btn');
+  var closeBtn=document.getElementById('chat-close-btn');
+  var clearBtn=document.getElementById('chat-clear-btn');
+  var sendBtn=document.getElementById('chat-send-btn');
+  var inp=document.getElementById('chat-input');
+  if(btn) btn.addEventListener('click',_toggleChat);
+  if(closeBtn) closeBtn.addEventListener('click',_toggleChat);
+  if(clearBtn) clearBtn.addEventListener('click',_clearChat);
+  if(sendBtn) sendBtn.addEventListener('click',_sendChat);
+  if(inp){
+    inp.addEventListener('input',function(){ this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,160)+'px'; });
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();_sendChat();} });
+  }
+});
+
+fetch('data.csv?t='+Date.now())
+  .then(function(r){ if(!r.ok) throw new Error('CSV讀取失敗'); return r.text(); })
+  .then(function(text){
+    globalRows=parseCSV(text);
+    buildAgg();
+    var grand=getGrand();
+    document.getElementById('h-title').textContent=t('title');
+    document.getElementById('h-total').textContent=fw(grand);
+    document.getElementById('h-unit').textContent=t('unit');
+    renderKPI();
+    renderMain();
+  })
+  .catch(function(err){ document.getElementById('main').innerHTML='<div class="err">⚠️ '+err.message+'</div>'; });
+</script>
+</body>
+</html>
