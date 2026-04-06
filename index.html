@@ -653,8 +653,7 @@ function renderDonutCat(){
             var total=ds.reduce(function(a,b){return a+b;},0);
             var pct=(v/total*100).toFixed(1);
             var g=CH_GROUPS[ctx.dataIndex];
-            return (g?cg(g.key)+'
-':'')+pct+'%';
+            return (g?cg(g.key)+' ':'')+pct+'%';
           },
           anchor:'center',
           align:'center',
@@ -704,8 +703,7 @@ function renderDonutCh(){
             var total=ds.reduce(function(a,b){return a+b;},0);
             var pct=(v/total*100).toFixed(1);
             var g=CH_GROUPS[ctx.dataIndex];
-            return (g?cg(g.key)+'
-':'')+pct+'%';
+            return (g?cg(g.key)+' ':'')+pct+'%';
           },
           anchor:'center',
           align:'center',
