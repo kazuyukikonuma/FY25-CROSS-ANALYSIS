@@ -8,6 +8,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>FY25 交叉分析</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
 :root{
@@ -37,7 +38,7 @@ body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);c
 .kcard{background:var(--bg);border:1.5px solid var(--bor);border-radius:10px;padding:10px 14px;min-width:110px;flex-shrink:0;cursor:pointer;transition:all .15s;user-select:none;}
 .kcard:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08);}
 .kcard.selected{border-width:2.5px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
-.sparkline{display:block;margin-top:6px;width:100%;height:28px;}
+.sparkline{display:block;margin-top:6px;width:100%;height:32px;}
 .kcard.sep{width:1px;min-width:1px;background:var(--bor);padding:0;border:none;border-radius:0;}
 .klbl{font-size:.72rem;font-weight:600;color:var(--sub);margin-bottom:4px;white-space:nowrap;}
 .kval{font-size:1.1rem;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-.02em;}
@@ -303,16 +304,19 @@ function drawSparkline(id, data, color){
         data: data.map(function(v){return parseFloat((v/10000).toFixed(1));}),
         borderColor: color,
         borderWidth: 1.5,
-        pointRadius: 0,
+        pointRadius: 2,
+        pointBackgroundColor: color,
         tension: 0.4,
         fill: true,
-        backgroundColor: color+'22'
+        backgroundColor: color+'22',
+        datalabels:{display:false}
       }]
     },
     options:{
-      responsive:false,
+      responsive:true,
+      maintainAspectRatio:false,
       animation:false,
-      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      plugins:{legend:{display:false},tooltip:{enabled:false},datalabels:{display:false}},
       scales:{x:{display:false},y:{display:false}}
     }
   });
@@ -505,7 +509,16 @@ function renderChart(){
         legend:{position:'top',labels:{color:'#0f172a',font:{size:13,weight:'600'},padding:16,usePointStyle:true}},
         tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleColor:'#f8fafc',bodyColor:'#e2e8f0',padding:12,callbacks:{
           label:function(ctx){ return ' '+ctx.dataset.label+': '+ctx.parsed.y+unit; }
-        }}
+        }},
+        datalabels:{
+          display:true,
+          color:function(ctx){ return ctx.dataset.borderColor; },
+          font:{size:10,weight:'700'},
+          formatter:function(v){ return v; },
+          anchor:'end',
+          align:'top',
+          offset:2
+        }
       },
       scales:{
         x:{stacked:isBar,ticks:{color:'#0f172a',font:{size:12,weight:'600'}},grid:{color:'#f0ece8'}},
@@ -604,7 +617,16 @@ function renderDonutCat(){
         tooltip:{callbacks:{label:function(ctx){
           var pct=(ctx.parsed/total*10000*100).toFixed(1);
           return ' '+ctx.label+': '+ctx.parsed+'萬 ('+pct+'%)';
-        }}}
+        }}},
+        datalabels:{
+          display:function(ctx){ return ctx.parsed>0; },
+          color:'#fff',
+          font:{size:11,weight:'700'},
+          formatter:function(v,ctx){
+            var pct=(v/data.reduce(function(a,b){return a+b;},0)*100).toFixed(1);
+            return pct+'%';
+          }
+        }
       }
     }
   });
@@ -630,7 +652,16 @@ function renderDonutCh(){
         tooltip:{callbacks:{label:function(ctx){
           var pct=(ctx.parsed/total*10000*100).toFixed(1);
           return ' '+ctx.label+': '+ctx.parsed+'萬 ('+pct+'%)';
-        }}}
+        }}},
+        datalabels:{
+          display:function(ctx){ return ctx.parsed>0; },
+          color:'#fff',
+          font:{size:11,weight:'700'},
+          formatter:function(v,ctx){
+            var pct=(v/data.reduce(function(a,b){return a+b;},0)*100).toFixed(1);
+            return pct+'%';
+          }
+        }
       }
     }
   });
