@@ -9,6 +9,10 @@
 <title>FY25 交叉分析</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script>
+// datalabelsプラグインをグローバル登録（全チャートに適用）
+Chart.register(ChartDataLabels);
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=DM+Mono:wght@400;500;600&display=swap');
 :root{
