@@ -180,7 +180,7 @@ var I18N = {
     pY:'年度',pM:'月次',pQ:'季別',crossall:'全て',
     addBtn:'＋ 系列追加',clrBtn:'全消去',
     hint:'商品群と通路を選んで追加してください。複数の組み合わせを重ねて比較できます。',
-    ctLine:'折れ線',ctBar:'棒グラフ',ctBar100:'100%棒',
+    ctLine:'折れ線',ctBar:'積み上げ棒',
     emptyTxt:'系列を追加してグラフを表示',
     chartTitle:'絞り込み比較グラフ',
     chatHd:'AI 分析アシスタント',chatCtx:'表示中：',chatInit:'こんにちは！FY25の売上データについて何でも聞いてください。',
@@ -191,7 +191,7 @@ var I18N = {
     pY:'年度',pM:'月次',pQ:'季別',crossall:'全部',
     addBtn:'＋ 新增系列',clrBtn:'清除全部',
     hint:'選擇商品群和通路後新增，可重疊多組進行比較。',
-    ctLine:'折線圖',ctBar:'長條圖',ctBar100:'100%長條',
+    ctLine:'折線圖',ctBar:'堆疊長條',
     emptyTxt:'新增系列以顯示圖表',
     chartTitle:'篩選比較圖',
     chatHd:'AI 分析助理',chatCtx:'顯示中：',chatInit:'您好！請隨時詢問FY25銷售數據相關問題。',
@@ -318,7 +318,6 @@ function renderMain(){
     +'<div class="chart-type-sw">'
     +'<button class="ctbtn'+(chartType==='line'?' on':'')+'" id="ctbtn-line" onclick="setChartType('line')"><span id="ct-line-lbl">'+t('ctLine')+'</span></button>'
     +'<button class="ctbtn'+(chartType==='bar'?' on':'')+'" id="ctbtn-bar" onclick="setChartType('bar')"><span id="ct-bar-lbl">'+t('ctBar')+'</span></button>'
-    +'<button class="ctbtn'+(chartType==='bar100'?' on':'')+'" id="ctbtn-bar100" onclick="setChartType('bar100')"><span id="ct-bar100-lbl">'+t('ctBar100')+'</span></button>'
     +'</div>'
     +'</div>'
     +'<div class="ftags" id="ftags"></div>'
@@ -329,7 +328,7 @@ function renderMain(){
     +'<span class="chart-badge" id="chart-badge">'+getPLabel()+'</span></div>'
     +'<div class="cw" id="chart-wrap">'
     +'<div class="empty-state" id="empty-state">'
-    +'<div class="empty-icon">📊</div>'
+    +'<img src="AIC.jpg" alt="AIC" style="width:160px;height:160px;object-fit:contain;opacity:.85;">'
     +'<div class="empty-txt" id="empty-txt">'+t('emptyTxt')+'</div>'
     +'</div>'
     +'<canvas id="main-chart" style="display:none"></canvas>'
@@ -401,23 +400,13 @@ function renderChart(){
   if(chartInst){ chartInst.destroy(); chartInst=null; }
   var unit=lang==='zh'?' 萬':' 万';
   var pList=getPList();
-  var isBar = chartType==='bar'||chartType==='bar100';
-  var is100 = chartType==='bar100';
+  var isBar = chartType==='bar';
   var datasets = seriesList.map(function(s){
     var d = {label:s.label, data:getSeriesData(s.cat,s.grp), backgroundColor:s.color+'cc', borderColor:s.color, borderWidth:isBar?0:2.5};
     if(!isBar){ d.pointRadius=5; d.pointHoverRadius=8; d.pointBackgroundColor=s.color; d.tension=0.3; d.fill=false; }
     else { d.borderRadius=3; }
     return d;
   });
-  // 100%棒の場合はデータをパーセント変換
-  if(is100){
-    var pList2=getPList();
-    var totals=pList2.map(function(_,li){ return datasets.reduce(function(s,ds){return s+(ds.data[li]||0);},0); });
-    datasets.forEach(function(ds){
-      ds._rawData=ds.data.slice();
-      ds.data=ds.data.map(function(v,li){ return totals[li]?parseFloat((v/totals[li]*100).toFixed(1)):0; });
-    });
-  }
   chartInst=new Chart(canvas,{
     type:isBar?'bar':'line',
     data:{labels:pList,datasets:datasets},
@@ -427,19 +416,12 @@ function renderChart(){
       plugins:{
         legend:{position:'top',labels:{color:'#0f172a',font:{size:13,weight:'600'},padding:16,usePointStyle:true}},
         tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleColor:'#f8fafc',bodyColor:'#e2e8f0',padding:12,callbacks:{
-          label:function(ctx){
-            if(is100){
-              var raw=datasets[ctx.datasetIndex]._rawData?datasets[ctx.datasetIndex]._rawData[ctx.dataIndex]:0;
-              return ' '+ctx.dataset.label+': '+ctx.parsed.y+'% ('+raw+unit+')';
-            }
-            return ' '+ctx.dataset.label+': '+ctx.parsed.y+unit;
-          }
+          label:function(ctx){ return ' '+ctx.dataset.label+': '+ctx.parsed.y+unit; }
         }}
       },
       scales:{
         x:{stacked:isBar,ticks:{color:'#0f172a',font:{size:12,weight:'600'}},grid:{color:'#f0ece8'}},
-        y:{stacked:isBar,min:is100?0:undefined,max:is100?100:undefined,
-          ticks:{color:'#0f172a',font:{size:12,weight:'600'},callback:function(v){return v+(is100?'%':unit);}},
+        y:{stacked:isBar,ticks:{color:'#0f172a',font:{size:12,weight:'600'},callback:function(v){return v+unit;}},
           grid:{color:'#f0ece8'}}
       }
     }
@@ -502,7 +484,7 @@ function renderCrossTable(){
 
 function setChartType(ct){
   chartType=ct;
-  ['line','bar','bar100'].forEach(function(k){
+  ['line','bar'].forEach(function(k){
     var btn=document.getElementById('ctbtn-'+k);
     if(btn) btn.classList.toggle('on',k===ct);
   });
@@ -518,10 +500,8 @@ function setLang(l){
   // chat UI
   var ctLine=document.getElementById('ct-line-lbl');
   var ctBar=document.getElementById('ct-bar-lbl');
-  var ctBar100=document.getElementById('ct-bar100-lbl');
   if(ctLine) ctLine.textContent=t('ctLine');
   if(ctBar) ctBar.textContent=t('ctBar');
-  if(ctBar100) ctBar100.textContent=t('ctBar100');
   var hdTxt=document.getElementById('chat-hd-txt');
   if(hdTxt) hdTxt.textContent=t('chatHd');
   var inp=document.getElementById('chat-input');
