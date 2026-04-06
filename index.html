@@ -118,21 +118,21 @@ body.chat-open .hd{right:340px;transition:right .3s ease;}
 .ctbtn.on{background:var(--txt);color:#fff;}
 .comp-section{background:var(--sur);border:2px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;}
 .comp-title{font-size:.86rem;font-weight:700;color:var(--txt);margin-bottom:16px;}
-.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;}
 .comp-card{background:var(--bg);border:1.5px solid var(--bor);border-radius:10px;padding:14px;}
 .comp-card-title{font-size:.78rem;font-weight:700;color:var(--sub);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;}
 .comp-sel-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
 .comp-sel-btn{padding:5px 12px;border:1.5px solid var(--bor);border-radius:20px;font-size:.78rem;font-family:inherit;font-weight:600;cursor:pointer;background:var(--sur);color:var(--sub);transition:all .15s;}
 .comp-sel-btn.active{color:#fff;border-color:transparent;}
-.comp-donut-wrap{position:relative;height:200px;}
+.comp-donut-wrap{position:relative;height:280px;}
 .bar100-wrap{overflow-x:auto;}
 table.bar100{width:100%;border-collapse:collapse;}
-table.bar100 td{padding:5px 8px;vertical-align:middle;}
-table.bar100 .row-lbl{font-size:.8rem;font-weight:700;white-space:nowrap;width:80px;color:var(--txt);}
+table.bar100 td{padding:7px 8px;vertical-align:middle;}
+table.bar100 .row-lbl{font-size:.88rem;font-weight:700;white-space:nowrap;width:72px;color:var(--txt);}
 table.bar100 .row-bar{width:100%;}
-table.bar100 .row-pct{font-size:.75rem;font-family:'DM Mono',monospace;font-weight:600;white-space:nowrap;width:50px;text-align:right;color:var(--sub);}
-.bar-track{height:28px;border-radius:4px;overflow:hidden;display:flex;background:var(--borl);}
-.bar-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;transition:width .4s ease;min-width:0;}
+table.bar100 .row-pct{font-size:.88rem;font-family:'DM Mono',monospace;font-weight:700;white-space:nowrap;width:54px;text-align:right;color:var(--txt);}
+.bar-track{height:44px;border-radius:6px;overflow:hidden;display:flex;background:var(--borl);}
+.bar-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.82rem;font-weight:700;color:#fff;overflow:hidden;white-space:nowrap;transition:width .4s ease;min-width:0;}
 .bar-seg:hover{opacity:.85;cursor:pointer;}
 @media(max-width:900px){.comp-grid{grid-template-columns:1fr;}}
 .loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--sub);gap:10px;}
@@ -604,7 +604,7 @@ function renderComp(){
   render100Bar();
 }
 
-function drawDonutLabels(chart, rawData, labels){
+function drawDonutLabels(chart, rawData, nameList){
   var ctx = chart.ctx;
   var meta = chart.getDatasetMeta(0);
   var total = rawData.reduce(function(a,b){return a+b;},0);
@@ -613,16 +613,26 @@ function drawDonutLabels(chart, rawData, labels){
   meta.data.forEach(function(arc, i){
     var val = rawData[i];
     var pct = val/total*100;
-    if(pct < 5) return; // 5%未満は省略
+    if(pct < 5) return;
     var angle = (arc.startAngle + arc.endAngle) / 2;
     var r = (arc.innerRadius + arc.outerRadius) / 2;
     var x = arc.x + Math.cos(angle) * r;
     var y = arc.y + Math.sin(angle) * r;
-    ctx.font = 'bold 11px DM Mono,monospace';
-    ctx.fillStyle = '#fff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(pct.toFixed(1)+'%', x, y);
+    // 名前ラベル
+    if(nameList && nameList[i]){
+      ctx.font = 'bold 11px Noto Sans JP,Noto Sans TC,sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.fillText(nameList[i], x, y-8);
+      ctx.font = 'bold 12px DM Mono,monospace';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(pct.toFixed(1)+'%', x, y+8);
+    } else {
+      ctx.font = 'bold 13px DM Mono,monospace';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(pct.toFixed(1)+'%', x, y);
+    }
   });
   ctx.restore();
 }
@@ -662,7 +672,7 @@ function renderDonutCat(){
         }}},
         datalabels:{display:false}
       },
-      animation:{onComplete:function(){ drawDonutLabels(this, data, null); }}
+      animation:{onComplete:function(){ drawDonutLabels(this, data, CH_GROUPS.map(function(g){return cg(g.key);})); }}
     }
   });
 }
@@ -690,7 +700,7 @@ function renderDonutCh(){
         }}},
         datalabels:{display:false}
       },
-      animation:{onComplete:function(){ drawDonutLabels(this, data, null); }}
+      animation:{onComplete:function(){ drawDonutLabels(this, data, CATS.map(cn)); }}
     }
   });
 }
@@ -709,7 +719,7 @@ function render100Bar(){
       var pct=rowTotal?v/rowTotal*100:0;
       if(pct<1) return;
       html+='<div class="bar-seg" style="width:'+pct.toFixed(1)+'%;background:'+g.color+'" title="'+cg(g.key)+': '+pct.toFixed(1)+'% ('+fw(v)+'萬)">'
-        +(pct>12?cg(g.key)+' '+pct.toFixed(0)+'%':'')+'</div>';
+        +(pct>10?cg(g.key)+' '+pct.toFixed(0)+'%':'')+'</div>';
     });
     html+='</div></td><td class="row-pct">'+((rowTotal/grand)*100).toFixed(1)+'%</td></tr>';
   });
@@ -725,7 +735,7 @@ function render100Bar(){
       var pct=rowTotal?v/rowTotal*100:0;
       if(pct<1) return;
       html+='<div class="bar-seg" style="width:'+pct.toFixed(1)+'%;background:'+CCOLORS[c]+'" title="'+cn(c)+': '+pct.toFixed(1)+'% ('+fw(v)+'萬)">'
-        +(pct>12?cn(c)+' '+pct.toFixed(0)+'%':'')+'</div>';
+        +(pct>10?cn(c)+' '+pct.toFixed(0)+'%':'')+'</div>';
     });
     html+='</div></td><td class="row-pct">'+((rowTotal/grand)*100).toFixed(1)+'%</td></tr>';
   });
