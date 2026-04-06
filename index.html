@@ -24,9 +24,7 @@ body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);c
 .hd-total{font-size:1.4rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--at);letter-spacing:-.03em;}
 .hd-unit{font-size:.82rem;color:var(--sub);margin-left:2px;}
 .hd-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
-.psw{display:flex;border:2px solid var(--bor);border-radius:8px;overflow:hidden;}
-.pbtn{background:none;border:none;padding:6px 16px;font-size:.83rem;font-family:inherit;font-weight:600;cursor:pointer;color:var(--sub);}
-.pbtn.on{background:var(--txt);color:#fff;}
+
 .ltog{display:flex;border:2px solid var(--bor);border-radius:8px;overflow:hidden;}
 .lbtn{background:none;border:none;padding:6px 13px;font-size:.8rem;font-family:inherit;font-weight:500;cursor:pointer;color:var(--sub);}
 .lbtn.on{background:var(--txt);color:#fff;}
@@ -61,6 +59,16 @@ body.chat-open .main{padding-right:20px;}
 .hint{font-size:.78rem;color:var(--dim);margin-top:6px;}
 
 /* ===== Chart card ===== */
+.cross-table-card{background:var(--sur);border:2px solid var(--bor);border-radius:14px;padding:20px 22px;margin-bottom:16px;}
+.ct-title{font-size:.86rem;font-weight:700;color:var(--txt);margin-bottom:14px;}
+.ct-wrap{overflow-x:auto;}
+table.ct{width:100%;border-collapse:collapse;font-size:.82rem;}
+table.ct th{padding:8px 12px;border:1px solid var(--bor);background:var(--bg);font-weight:700;text-align:center;font-size:.78rem;white-space:nowrap;}
+table.ct th:first-child{text-align:left;}
+table.ct td{padding:8px 12px;border:1px solid var(--borl);text-align:right;font-family:'DM Mono',monospace;font-size:.82rem;font-weight:600;white-space:nowrap;}
+table.ct td:first-child{text-align:left;font-family:'Noto Sans JP','Noto Sans TC',sans-serif;font-weight:600;}
+table.ct .tr-total td{font-weight:700;border-top:2px solid var(--bor);background:var(--bg);}
+table.ct .pct{font-size:.72rem;color:var(--sub);font-weight:400;display:block;}
 .chart-card{background:var(--sur);border:2px solid var(--bor);border-radius:14px;padding:20px 22px;}
 .chart-title{font-size:.86rem;font-weight:700;color:var(--txt);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
 .chart-badge{font-size:.7rem;background:var(--alb);color:var(--al);padding:2px 8px;border-radius:12px;font-weight:600;}
@@ -109,11 +117,6 @@ body.chat-open .hd{right:340px;transition:right .3s ease;}
   <div class="hd-title" id="h-title">FY25 交叉分析</div>
   <div><span class="hd-total" id="h-total">—</span><span class="hd-unit" id="h-unit">萬元</span></div>
   <div class="hd-right">
-    <div class="psw">
-      <button class="pbtn on" id="pb-y" onclick="setPeriod('y')">年度</button>
-      <button class="pbtn" id="pb-m" onclick="setPeriod('m')">月次</button>
-      <button class="pbtn" id="pb-q" onclick="setPeriod('q')">季別</button>
-    </div>
     <div class="ltog">
       <button class="lbtn" onclick="setLang('ja')">日本語</button>
       <button class="lbtn on" onclick="setLang('zh')">繁中</button>
@@ -320,9 +323,11 @@ function renderMain(){
     +'<canvas id="main-chart" style="display:none"></canvas>'
     +'</div>'
     +'</div>';
+  html+='<div class="cross-table-card" id="cross-table-wrap"></div>';
   document.getElementById('main').innerHTML=html;
   renderTags();
   renderChart();
+  renderCrossTable();
 }
 
 // ===== Tags =====
@@ -424,23 +429,62 @@ function renderChart(){
 }
 
 // ===== Period / Lang =====
-function setPeriod(p){
-  period=p;
-  ['y','m','q'].forEach(function(k){ document.getElementById('pb-'+k).classList.toggle('on',k===p); });
-  renderChart();
-  var badge=document.getElementById('chart-badge');
-  if(badge) badge.textContent=getPLabel();
-  updateChatCtx();
+function renderCrossTable(){
+  var wrap=document.getElementById('cross-table-wrap'); if(!wrap||!globalRows) return;
+  // 商品群×通路グループのクロス集計
+  var mat={};
+  CATS.forEach(function(c){ mat[c]={}; CH_GROUPS.forEach(function(g){ mat[c][g.key]=0; }); });
+  globalRows.forEach(function(row){
+    CH_GROUPS.forEach(function(g){
+      if(g.channels.indexOf(row.channel)>=0){
+        if(mat[row.category]) mat[row.category][g.key]+=MONTHS.reduce(function(s,m){return s+(row[m]||0);},0);
+      }
+    });
+  });
+  var grand=getGrand();
+  // 最大値（ヒートマップ用）
+  var maxV=0;
+  CATS.forEach(function(c){ CH_GROUPS.forEach(function(g){ if(mat[c][g.key]>maxV) maxV=mat[c][g.key]; }); });
+  function hbg(v){
+    if(!v||!maxV) return '';
+    var r=v/maxV;
+    var alpha=Math.round(r*60+10);
+    return 'background:rgba(123,156,196,'+alpha/100+');';
+  }
+  var html='<div class="ct-title" id="ct-title">'+t('cat')+' × '+t('ch')+'</div><div class="ct-wrap"><table class="ct">';
+  // ヘッダー
+  html+='<thead><tr><th>'+t('cat')+'</th>';
+  CH_GROUPS.forEach(function(g){ html+='<th style="color:'+g.color+'">'+cg(g.key)+'</th>'; });
+  html+='<th>'+t('total')+'</th></tr></thead><tbody>';
+  // 行
+  CATS.forEach(function(c){
+    var rowTot=CH_GROUPS.reduce(function(s,g){return s+mat[c][g.key];},0);
+    html+='<tr><td><span style="color:'+CCOLORS[c]+';font-weight:700;">'+cn(c)+'</span></td>';
+    CH_GROUPS.forEach(function(g){
+      var v=mat[c][g.key];
+      html+='<td style="'+hbg(v)+'">'+fw(v)+'<span class="pct">'+((v/grand)*100).toFixed(1)+'%</span></td>';
+    });
+    html+='<td><strong>'+fw(rowTot)+'</strong><span class="pct">'+((rowTot/grand)*100).toFixed(1)+'%</span></td></tr>';
+  });
+  // 合計行
+  html+='<tr class="tr-total"><td>'+t('total')+'</td>';
+  CH_GROUPS.forEach(function(g){
+    var v=CATS.reduce(function(s,c){return s+mat[c][g.key];},0);
+    html+='<td>'+fw(v)+'<span class="pct">'+((v/grand)*100).toFixed(1)+'%</span></td>';
+  });
+  html+='<td>'+fw(grand)+'<span class="pct">100%</span></td></tr>';
+  html+='</tbody></table></div>';
+  wrap.innerHTML=html;
 }
+
+// setPeriod removed (no period tabs)
 
 function setLang(l){
   lang=l;
   document.querySelectorAll('.lbtn').forEach(function(b){ b.classList.toggle('on',b.textContent.includes(l==='ja'?'日本語':'繁中')); });
   document.getElementById('h-title').textContent=t('title');
   document.getElementById('h-unit').textContent=t('unit');
-  document.getElementById('pb-y').textContent=t('pY');
-  document.getElementById('pb-m').textContent=t('pM');
-  document.getElementById('pb-q').textContent=t('pQ');
+
   // chat UI
   var hdTxt=document.getElementById('chat-hd-txt');
   if(hdTxt) hdTxt.textContent=t('chatHd');
@@ -452,7 +496,7 @@ function setLang(l){
   if(clearBtn) clearBtn.textContent=t('clear');
   var initMsg=document.getElementById('chat-init-msg');
   if(initMsg) initMsg.textContent=t('chatInit');
-  if(globalRows){ renderKPI(); renderMain(); }
+  if(globalRows){ renderKPI(); renderMain(); renderCrossTable(); }
 }
 
 // ===== Grand total =====
