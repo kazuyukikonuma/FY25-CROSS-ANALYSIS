@@ -27,7 +27,8 @@ Chart.register(ChartDataLabels);
 body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);color:var(--txt);font-size:15px;}
 
 /* ===== Sticky Header ===== */
-.hd{position:sticky;top:0;z-index:100;background:var(--sur);border-bottom:2px solid var(--bor);padding:10px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 2px 8px rgba(0,0,0,.05);flex-wrap:wrap;}
+.hd{position:sticky;top:0;z-index:100;background:var(--sur);border-bottom:2px solid var(--bor);box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.hd-inner{max-width:1400px;margin:0 auto;padding:10px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;width:100%;}
 .hd-title{font-size:1.1rem;font-weight:700;white-space:nowrap;}
 .hd-total{font-size:1.4rem;font-weight:700;font-family:'DM Mono',monospace;color:var(--at);letter-spacing:-.03em;}
 .hd-unit{font-size:.82rem;color:var(--sub);margin-left:2px;}
@@ -39,7 +40,7 @@ body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);c
 
 /* ===== KPI strip ===== */
 .kstrip-outer{background:var(--sur);border-bottom:1px solid var(--borl);}
-.kstrip{display:flex;gap:8px;padding:14px 24px;overflow-x:auto;max-width:1400px;margin:0 auto;justify-content:center;}
+.kstrip{display:flex;gap:8px;padding:14px 24px;overflow-x:auto;max-width:1400px;margin:0 auto;justify-content:flex-start;}
 .kcard{background:var(--bg);border:1.5px solid var(--bor);border-radius:10px;padding:10px 14px;min-width:110px;flex-shrink:0;cursor:pointer;transition:all .15s;user-select:none;}
 .kcard:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08);}
 .kcard.selected{border-width:2.5px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
@@ -50,7 +51,7 @@ body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);c
 .kpct{font-size:.72rem;color:var(--sub);margin-top:2px;}
 
 /* ===== Main area ===== */
-.main{padding:20px 24px;max-width:1400px;margin:0 auto;}
+.main{padding:20px 24px;max-width:1400px;margin:0 auto;box-sizing:border-box;}
 body.chat-open .kstrip{max-width:calc(1400px - 0px);}
 body.chat-open .main{padding-right:20px;}
 
@@ -146,7 +147,7 @@ table.bar100 .row-pct{font-size:.88rem;font-family:'DM Mono',monospace;font-weig
 <body>
 
 <!-- Header -->
-<div class="hd">
+<div class="hd"><div class="hd-inner">
   <div class="hd-title" id="h-title">FY25 交叉分析</div>
   <div><span class="hd-total" id="h-total">—</span><span class="hd-unit" id="h-unit">萬元</span></div>
   <div class="hd-right">
@@ -155,7 +156,7 @@ table.bar100 .row-pct{font-size:.88rem;font-family:'DM Mono',monospace;font-weig
       <button class="lbtn on" onclick="setLang('zh')">繁中</button>
     </div>
   </div>
-</div>
+</div></div>
 
 <!-- KPI Strip -->
 <div class="kstrip-outer"><div class="kstrip" id="kstrip"></div></div>
