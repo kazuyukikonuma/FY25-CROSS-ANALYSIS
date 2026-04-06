@@ -38,7 +38,8 @@ body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);c
 .lbtn.on{background:var(--txt);color:#fff;}
 
 /* ===== KPI strip ===== */
-.kstrip{display:flex;gap:8px;padding:14px 24px;overflow-x:auto;background:var(--sur);border-bottom:1px solid var(--borl);justify-content:center;}
+.kstrip-outer{background:var(--sur);border-bottom:1px solid var(--borl);}
+.kstrip{display:flex;gap:8px;padding:14px 24px;overflow-x:auto;max-width:1400px;margin:0 auto;justify-content:center;}
 .kcard{background:var(--bg);border:1.5px solid var(--bor);border-radius:10px;padding:10px 14px;min-width:110px;flex-shrink:0;cursor:pointer;transition:all .15s;user-select:none;}
 .kcard:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08);}
 .kcard.selected{border-width:2.5px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
@@ -50,6 +51,7 @@ body{font-family:'Noto Sans JP','Noto Sans TC',sans-serif;background:var(--bg);c
 
 /* ===== Main area ===== */
 .main{padding:20px 24px;max-width:1400px;margin:0 auto;}
+body.chat-open .kstrip{max-width:calc(1400px - 0px);}
 body.chat-open .main{padding-right:20px;}
 
 /* ===== Filter panel ===== */
@@ -156,7 +158,7 @@ table.bar100 .row-pct{font-size:.88rem;font-family:'DM Mono',monospace;font-weig
 </div>
 
 <!-- KPI Strip -->
-<div class="kstrip" id="kstrip"></div>
+<div class="kstrip-outer"><div class="kstrip" id="kstrip"></div></div>
 
 <!-- Main -->
 <div class="main" id="main">
